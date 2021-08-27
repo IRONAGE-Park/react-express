@@ -2,31 +2,46 @@ import 'core-js/stable';
 import 'regenerator-runtime/runtime';
 import 'react-app-polyfill/ie9';
 import 'react-app-polyfill/stable';
+
 import React from 'react';
 import ReactDOM from 'react-dom';
-import App from './App';
-import * as serviceWorker from './serviceWorker';
 import { BrowserRouter } from 'react-router-dom';
+import * as serviceWorker from './serviceWorker';
+import { configureStore } from '@reduxjs/toolkit';
+import { Provider } from 'react-redux';
 import createSagaMiddleware from 'redux-saga';
 import rootReducer, { rootSaga } from './store';
-import { createStore, applyMiddleware } from 'redux';
-import { Provider } from 'react-redux';
+
+import App from './App';
 
 const sagaMiddleware = createSagaMiddleware();
-const store = createStore(
-    rootReducer,
-    window.__PRELOAD_STATE__,
-    applyMiddleware(sagaMiddleware)
-);
+
+const devMode = process.env.NODE_ENV === 'development';
+
+const store = configureStore({
+  reducer: rootReducer,
+  preloadedState: window.__PRELOAD_STATE__,
+  middleware: [sagaMiddleware],
+  devTools: devMode,
+});
+
+const Root = () => {
+  return (
+    <BrowserRouter>
+      <Provider store={store}>
+        <App />
+      </Provider>
+    </BrowserRouter>
+  );
+};
+const root = document.getElementById('root');
+
 sagaMiddleware.run(rootSaga);
 
-ReactDOM.render(
-    <BrowserRouter>
-        <Provider store={store}>
-            <App />
-        </Provider>
-    </BrowserRouter>,
-    document.getElementById('root'),
-);
+if (process.env.NODE_ENV === 'production') {
+  ReactDOM.hydrate(<Root />, root);
+} else {
+  ReactDOM.render(<Root />, root);
+}
 
 serviceWorker.unregister();
